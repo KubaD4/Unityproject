@@ -1044,6 +1044,7 @@ GameObject:
   - component: {fileID: 173487760}
   - component: {fileID: 173487759}
   - component: {fileID: 173487758}
+  - component: {fileID: 173487761}
   m_Layer: 0
   m_Name: PathManager
   m_TagString: Untagged
@@ -1191,6 +1192,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &173487761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 173487757}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b3ba68ae6b157e43a4220f5589a5f23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DrawPathMovement
+  currentAgent: {fileID: 1882354390}
+  drawingHand: {fileID: 40176698}
+  linePrefab: {fileID: 6225450}
 --- !u!1 &235716539
 GameObject:
   m_ObjectHideFlags: 0
@@ -4201,7 +4217,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 81bb9eea30387e442899949a80011e55, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 81bb9eea30387e442899949a80011e55, type: 3}
       propertyPath: m_TagString
@@ -5808,6 +5824,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a354d71995ffbb44f8c8eaf49912493c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1494118266}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a354d71995ffbb44f8c8eaf49912493c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1494118267}
   m_SourcePrefab: {fileID: 100100000, guid: a354d71995ffbb44f8c8eaf49912493c, type: 3}
 --- !u!1 &1494118260 stripped
 GameObject:
@@ -5952,6 +5971,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::flag
   avatarScript: {fileID: 1191340739}
   pointableElement: {fileID: 1494118262}
+--- !u!114 &1494118267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1494118260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b237e4c6bf12174283af35886c5c16c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::flag
+  avatarScript: {fileID: 1882354394}
+  pointableElement: {fileID: 1494118262}
 --- !u!1001 &1525887030
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5970,11 +6003,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -4.8
+      value: -4.94
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -2.14
+      value: -2.53
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -6146,7 +6179,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_TagString
