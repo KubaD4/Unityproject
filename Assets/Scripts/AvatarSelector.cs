@@ -14,7 +14,8 @@ public class AvatarSelector : MonoBehaviour
     public void ChooseRacer() { SwitchAvatar(racer, bananaMan); }
 
     private void SwitchAvatar(GameObject toShow, GameObject toHide)
-    {
+    {   
+        Debug.Log($"[Selector] {toShow.name}, {toHide.name}");
         toHide.SetActive(false);
         toShow.SetActive(true);
 
