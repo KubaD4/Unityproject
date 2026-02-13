@@ -10,7 +10,7 @@ public class SceneManager : MonoBehaviour
     public OVRPassthroughLayer passthroughLayer;
 
     //Normal mode by default
-    private bool isAR = false;
+    private bool isAR = true;
 
 
     // For whatever reason, on simulator (maybe also metaquest), buttons are triggered two times
@@ -23,10 +23,10 @@ public class SceneManager : MonoBehaviour
         if (ARSceneRoot != null)
             passthroughLayer = ARSceneRoot.GetComponentInChildren<OVRPassthroughLayer>();
 
-        NormalSceneRoot.SetActive(true);
-        ARSceneRoot.SetActive(false);
+        NormalSceneRoot.SetActive(!isAR);
+        ARSceneRoot.SetActive(isAR);
         if (passthroughLayer != null)
-           passthroughLayer.enabled = false; // Start with passthrough hidden
+           passthroughLayer.enabled = isAR;
     }
 
     public void ToggleAR()
