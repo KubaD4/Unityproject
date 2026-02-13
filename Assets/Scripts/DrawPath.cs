@@ -70,13 +70,19 @@ public class DrawPathMovement : MonoBehaviour
             point.y = 0.05f;
 
             // 3. These points will vary as the hand moves
-            if (Vector3.Distance(pathPoints[pathPoints.Count - 1], point) > 0.02f)
+            if (pathPoints.Count == 0)
             {
                 pathPoints.Add(point);
                 currentLine.positionCount = pathPoints.Count;
                 currentLine.SetPositions(pathPoints.ToArray());
-                Debug.Log("Point obtained via Meta interface: " + point + " Count: " + pathPoints.Count);
-            }
+                Debug.Log("First point added: " + point);
+            } else if (Vector3.Distance(pathPoints[pathPoints.Count - 1], point) > 0.02f)
+                {
+                    pathPoints.Add(point);
+                    currentLine.positionCount = pathPoints.Count;
+                    currentLine.SetPositions(pathPoints.ToArray());
+                    Debug.Log("Point obtained via Meta interface: " + point + " Count: " + pathPoints.Count);
+                }
         }
     }
 
