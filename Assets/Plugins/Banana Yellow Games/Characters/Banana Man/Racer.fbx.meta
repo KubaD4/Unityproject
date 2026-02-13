@@ -8,12 +8,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Body
-    second: {fileID: 8180735475426118592, guid: ed3246fdab0afd649b33329dd761a9cf, type: 3}
+    second: {fileID: -2708086894567524341, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Joints
-    second: {fileID: -9103484930961366303, guid: 81bb9eea30387e442899949a80011e55, type: 3}
+    second: {fileID: 2100000, guid: a54ac84732b014d9bb18dd370816831d, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
