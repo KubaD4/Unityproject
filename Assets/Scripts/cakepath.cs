@@ -60,7 +60,7 @@ public class CakePathFollower : MonoBehaviour
 
         // add the final cake at the end position
         Vector3 finalPos = corners[corners.Length - 1];
-        finalPos.y = 0.05f;
+        finalPos.y = 0.5f;
         GameObject finalCake = Instantiate(cakePrefab, finalPos, Quaternion.identity);
         spawnedCakes.Add(finalCake);
     }
