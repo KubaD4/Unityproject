@@ -16,65 +16,226 @@ public class VRGuideController : MonoBehaviour
     public float continueDistance = 2.0f;
     public float wanderRadius = 10.0f;
     public float rotationSpeed = 5.0f;
+    
+    [Header("Two-Phase Navigation")]
+    public float reachPlayerDistance = 1.8f;
+    private Vector3 finalDestination;
+    private bool isGoingToPlayer = false;
+    private bool hasReachedPlayer = false;
+    private bool isWaitingNearPlayer = false;
 
     private bool isGuideMode = false;
     private float moveStartTime = -99f;
     public bool isEating = false;
+    
+    // 🆕 NEW: Anti-stuck system
+    private float lastPathUpdateTime = 0f;
+    private Vector3 lastPosition;
+    private float stuckCheckTime = 0f;
+    private const float PATH_UPDATE_INTERVAL = 0.5f; // Update path every 0.5 seconds
+    private const float STUCK_THRESHOLD = 0.1f; // Consider stuck if speed < 0.1 for 1 second
+    private const float STUCK_CHECK_DURATION = 1.0f;
+
+    void Start()
+    {
+        lastPosition = transform.position;
+    }
 
     void Update()
     {
-        // safety check
+        // Safety check
         if (agent == null || !agent.gameObject.activeInHierarchy) return;
 
-        // 1. Data gathering: always collect regardless of mode so animator receives parameters
+        // 1. Data gathering
         float speed = agent.velocity.magnitude;
         float distToTarget = (agent.hasPath && !agent.pathPending) ? agent.remainingDistance : 9999f;
         float distToPlayer = (playerHead != null) ? Vector3.Distance(agent.transform.position, playerHead.position) : 0f;
 
-        // 2. Pass parameters to Animator: do this before intercepts so "walking" and "Arrive" conditions always receive data
+        // 2. Pass parameters to Animator
         if (animator != null)
         {
             animator.SetFloat("Speed", speed);
             animator.SetFloat("DistToTarget", distToTarget);
-            // If eating cake, force IsGuideMode=false to prevent Arrive from triggering while eating
             animator.SetBool("IsGuideMode", isEating ? false : isGuideMode);
-            // Sync IsEating to the Animator so transitions that check it behave correctly
             animator.SetBool("IsEating", isEating);
         }
 
-        // 3. Intercept logic: if currently eating, skip the following guide and arrival cleanup logic
+        // 3. Intercept logic: if eating, skip
         if (isEating) return;
 
-        // 4. Core guidance logic
+        // 4. CHECK IF AGENT IS STUCK (moving but velocity ≈ 0)
+        bool isStuck = DetectAndHandleStuck(speed);
+
+        // 5. TWO-PHASE LOGIC: Phase 1 - Going to player
+        if (isGoingToPlayer && !hasReachedPlayer)
+        {
+            HandlePhaseOneGoingToPlayer(distToPlayer, isStuck);
+            return; // Skip the rest of Update while in phase 1
+        }
+
+        // 6. Original guide logic (Phase 2 - guiding to destination)
         if (isGuideMode && agent.hasPath)
         {
             if (distToTarget > agent.stoppingDistance + 0.1f)
             {
-                // start protection
+                // Start protection
                 bool isStarting = Time.time < moveStartTime + 0.5f;
                 if (distToTarget < 1.0f) isStarting = false;
 
-                // stop logic: player too far
+                // Stop logic: player too far
                 if (distToPlayer > waitDistance && !isStarting)
                 {
                     agent.isStopped = true;
                     RotateTowardsUser();
                 }
-                // walking logic: player is near
+                // Walking logic: player is near
                 else if (distToPlayer < continueDistance || isStarting)
                 {
                     agent.isStopped = false;
                     agent.updateRotation = true;
+                    
+                    // If stuck in Phase 2, recalculate path
+                    if (isStuck)
+                    {
+                        agent.SetDestination(finalDestination);
+                    }
                 }
             }
         }
 
-        // 5. Arrival cleanup
+        // 7. Arrival cleanup
         if (agent.hasPath && distToTarget <= agent.stoppingDistance + 0.1f)
         {
             agent.ResetPath();
             isGuideMode = false;
+            isGoingToPlayer = false;
+            hasReachedPlayer = false;
+            isWaitingNearPlayer = false;
+            
             if (targetVisual != null) targetVisual.gameObject.SetActive(false);
+        }
+    }
+
+    private bool DetectAndHandleStuck(float currentSpeed)
+    {
+        // Only check if agent should be moving
+        if (agent.isStopped || !agent.hasPath)
+        {
+            stuckCheckTime = Time.time; // Reset timer
+            return false;
+        }
+
+        // Check if moving very slowly
+        if (currentSpeed < STUCK_THRESHOLD)
+        {
+            // Agent is stuck - increment timer
+            if (Time.time - stuckCheckTime >= STUCK_CHECK_DURATION)
+            {
+                stuckCheckTime = Time.time; // Reset timer to avoid spamming
+                return true;
+            }
+        }
+        else
+        {
+            // Agent is moving fine - reset timer
+            stuckCheckTime = Time.time;
+        }
+
+        return false;
+    }
+
+    private void HandlePhaseOneGoingToPlayer(float distToPlayer, bool isStuck)
+    {
+        // Hysteresis thresholds
+        float stopDistance = reachPlayerDistance + 0.2f;
+        float resumeDistance = reachPlayerDistance + 0.7f;
+        
+        // Check if we reached the player (transition to Phase 2)
+        if (distToPlayer <= reachPlayerDistance)
+        {
+            hasReachedPlayer = true;
+            isGoingToPlayer = false;
+            isWaitingNearPlayer = false;
+            
+            // Force clean path reset
+            agent.ResetPath();
+            agent.isStopped = true;
+            
+            // Set new destination to final target
+            agent.isStopped = false;
+            agent.SetDestination(finalDestination);
+            
+            if (targetVisual != null)
+            {
+                targetVisual.position = finalDestination + Vector3.up * 0.05f;
+                targetVisual.gameObject.SetActive(true);
+            }
+            return;
+        }
+
+        bool hasValidPath = agent.hasPath && 
+                           !agent.pathPending && 
+                           agent.pathStatus == NavMeshPathStatus.PathComplete;
+        
+        bool shouldUpdatePath = false;
+        
+        // Determine if we need to update the path
+        if (!hasValidPath)
+        {
+            shouldUpdatePath = true;
+        }
+        else if (isStuck)
+        {
+            shouldUpdatePath = true;
+        }
+        else if (Time.time - lastPathUpdateTime > PATH_UPDATE_INTERVAL)
+        {
+            // Periodic update to handle moving player
+            shouldUpdatePath = true;
+        }
+
+        // WAITING NEAR PLAYER logic
+        if (isWaitingNearPlayer)
+        {
+            if (distToPlayer > resumeDistance)
+            {
+                // Player moved far enough - resume following
+                isWaitingNearPlayer = false;
+                shouldUpdatePath = true;
+            }
+            else if (shouldUpdatePath)
+            {
+                // Update path even while waiting (player might have moved slightly)
+            }
+        }
+        // ACTIVE PURSUIT logic
+        else
+        {
+            if (distToPlayer <= stopDistance)
+            {
+                // Got close - stop and wait
+                isWaitingNearPlayer = true;
+                agent.ResetPath();
+                agent.isStopped = true;
+                return; // Don't update path, just wait
+            }
+        }
+
+        // UPDATE PATH TO PLAYER (if needed)
+        if (shouldUpdatePath && playerHead != null)
+        {
+            // Only update if player moved significantly OR path is invalid OR stuck
+            float distToCurrentDest = agent.hasPath ? 
+                Vector3.Distance(agent.destination, playerHead.position) : 999f;
+            
+            if (!hasValidPath || isStuck || distToCurrentDest > 0.3f)
+            {
+                agent.SetDestination(playerHead.position);
+                agent.isStopped = false;
+                agent.updateRotation = true;
+                lastPathUpdateTime = Time.time;
+                
+            }
         }
     }
 
@@ -86,22 +247,28 @@ public class VRGuideController : MonoBehaviour
         direction.y = 0;
         if (direction != Vector3.zero)
         {
-            agent.transform.rotation = Quaternion.Slerp(agent.transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * rotationSpeed);
+            agent.transform.rotation = Quaternion.Slerp(
+                agent.transform.rotation, 
+                Quaternion.LookRotation(direction), 
+                Time.deltaTime * rotationSpeed
+            );
         }
     }
 
     public void SetRandomDestination()
     {
+        Debug.Log("========== RANDOM DESTINATION CLICKED ==========");
+        
         // Step 1: Ensure the Agent is alive
         if (agent == null || !agent.gameObject.activeInHierarchy)
         {
-            Debug.LogWarning("⚠️ Current Agent invalid; searching for an active Agent...");
+            Debug.LogWarning("Current Agent invalid; searching for an active Agent...");
             var allAgents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
             foreach (var a in allAgents)
             {
                 if (a.gameObject.activeInHierarchy)
                 {
-                    agent = a; // found a live Racer
+                    agent = a;
                     break;
                 }
             }
@@ -109,34 +276,24 @@ public class VRGuideController : MonoBehaviour
 
         if (agent == null)
         {
-            Debug.LogError("❌ No active Agent found in the scene!");
+            Debug.LogError("No active Agent found in the scene!");
             return;
         }
 
         // Step 2: Force-refresh Animator 
-
         animator = agent.GetComponentInChildren<Animator>();
 
-        if (animator != null)
-        {
-            Debug.Log($"✅ Animator connected: {animator.name} (belongs to {agent.name})");
-        }
-        else
-        {
-            Debug.LogError($"❌ Critical warning: No Animator component found on {agent.name} or its children!");
-        }
-
-        // Step 3: 🧹 Cleanup the scene 
+        // Step 3: Cleanup the scene 
         var agents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
         foreach (var a in agents)
         {
-            // If this Agent is not the one we're controlling, force-hide it
             if (a != agent && a.gameObject.activeInHierarchy)
             {
                 a.gameObject.SetActive(false);
-                Debug.Log($"🛑 Forced deactivated extra Avatar: {a.name}");
+
             }
         }
+
         // Step 4: Position safety fix
         if (!agent.isOnNavMesh)
         {
@@ -144,26 +301,54 @@ public class VRGuideController : MonoBehaviour
             if (NavMesh.SamplePosition(agent.transform.position, out hit, 2.0f, NavMesh.AllAreas))
             {
                 agent.Warp(hit.position);
+
             }
         }
+
         // Step 5: Start moving
         isGuideMode = true;
         agent.isStopped = false;
         agent.updateRotation = true;
         moveStartTime = Time.time;
+        lastPathUpdateTime = Time.time;
+        stuckCheckTime = Time.time;
 
+        // Step 6: Generate random destination
         Vector3 randomPos = Random.insideUnitSphere * wanderRadius;
         randomPos += agent.transform.position;
         NavMeshHit destinationHit;
 
         if (NavMesh.SamplePosition(randomPos, out destinationHit, wanderRadius, NavMesh.AllAreas))
         {
-            agent.SetDestination(destinationHit.position);
+            finalDestination = destinationHit.position;
+
+            
+            // PHASE 1: First go to player
+            if (playerHead != null)
+            {
+                isGoingToPlayer = true;
+                hasReachedPlayer = false;
+                isWaitingNearPlayer = false;
+                agent.SetDestination(playerHead.position);
+        
+            }
+            else
+            {
+                // Fallback: if no playerHead, go directly to destination
+                Debug.LogWarning("⚠️ No playerHead found, going directly to destination");
+                agent.SetDestination(finalDestination);
+                hasReachedPlayer = true; // Skip phase 1
+            }
+            
+            // Hide target visual until phase 2
             if (targetVisual != null)
             {
-                targetVisual.position = destinationHit.position + Vector3.up * 0.05f;
-                targetVisual.gameObject.SetActive(true);
+                targetVisual.gameObject.SetActive(false);
             }
+        }
+        else
+        {
+            Debug.LogError("Failed to find valid destination on NavMesh!");
         }
     }
 }
