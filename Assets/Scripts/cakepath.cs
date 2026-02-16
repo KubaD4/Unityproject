@@ -11,6 +11,10 @@ public class CakePathFollower : MonoBehaviour
     public Animator animator;
     public float cakeInterval = 2f;
 
+    [Header("Cake Height")]
+    [Tooltip("How high above the NavMesh ground the cakes float")]
+    public float cakeHeightOffset = 0.4f;
+
     [Header("Stop Distance")]
     public float stopDistance = 1.2f;
 
@@ -21,14 +25,23 @@ public class CakePathFollower : MonoBehaviour
         StopAllCoroutines();
         ClearCakes();
 
-        // ✅ DEBUG: Log everything
-        Debug.Log($"[CakePath] Avatar: {gameObject.name}");
-        Debug.Log($"[CakePath] Avatar position: {transform.position}");
-        Debug.Log($"[CakePath] Agent position: {agent.transform.position}");
-        Debug.Log($"[CakePath] Agent isOnNavMesh: {agent.isOnNavMesh}");
-        Debug.Log($"[CakePath] Target position: {targetPosition}");
+        // Always re-grab the active avatar's agent and animator
+        // (in case avatar was switched since this component was set up)
+        RefreshReferences();
 
-        // ✅ FIX: Force agent onto NavMesh if needed
+        Debug.Log($"[CakePath] Avatar: {gameObject.name}");
+        Debug.Log($"[CakePath] Agent: {(agent != null ? agent.name : "NULL")}");
+        Debug.Log($"[CakePath] Animator: {(animator != null ? animator.name : "NULL")}");
+        Debug.Log($"[CakePath] Agent isOnNavMesh: {(agent != null ? agent.isOnNavMesh.ToString() : "N/A")}");
+        Debug.Log($"[CakePath] Target: {targetPosition}");
+
+        if (agent == null)
+        {
+            Debug.LogError("[CakePath] No NavMeshAgent found! Aborting.");
+            return;
+        }
+
+        // Force agent onto NavMesh if needed
         if (!agent.isOnNavMesh)
         {
             NavMeshHit hit;
@@ -48,10 +61,6 @@ public class CakePathFollower : MonoBehaviour
         if (agent.CalculatePath(targetPosition, path))
         {
             Debug.Log($"[CakePath] Path calculated! Corners: {path.corners.Length}");
-            for (int c = 0; c < path.corners.Length; c++)
-            {
-                Debug.Log($"[CakePath] Corner[{c}]: {path.corners[c]}");
-            }
             SpawnCakesAlongPath(path.corners);
             StartCoroutine(FollowPathAndEat());
         }
@@ -61,14 +70,45 @@ public class CakePathFollower : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Refreshes agent and animator references to match the currently active avatar.
+    /// </summary>
+    void RefreshReferences()
+    {
+        // If current agent is null or inactive, find an active one
+        if (agent == null || !agent.gameObject.activeInHierarchy)
+        {
+            var agents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
+            foreach (var a in agents)
+            {
+                if (a.gameObject.activeInHierarchy)
+                {
+                    agent = a;
+                    Debug.Log($"[CakePath] Re-bound agent to: {a.name}");
+                    break;
+                }
+            }
+        }
+
+        // Always refresh animator from the agent's hierarchy
+        if (agent != null)
+        {
+            animator = agent.GetComponentInChildren<Animator>();
+            if (animator != null)
+                Debug.Log($"[CakePath] Animator bound: {animator.name}");
+            else
+                Debug.LogWarning("[CakePath] No Animator found on agent!");
+        }
+    }
+
     void SpawnCakesAlongPath(Vector3[] corners)
     {
         if (corners.Length < 2) return;
 
-        // ✅ FIX: Use the NavMesh Y level + small offset, instead of hardcoded 0.05
-        float groundY = corners[0].y + 0.05f;
+        // Use the NavMesh Y level + offset so cakes float visibly above ground
+        float groundY = corners[0].y + cakeHeightOffset;
 
-        // 1. generate cake along the path
+        // generate cakes along the path
         for (int i = 0; i < corners.Length - 1; i++)
         {
             Vector3 start = corners[i];
@@ -78,16 +118,18 @@ public class CakePathFollower : MonoBehaviour
             for (float d = 0; d < segmentLength; d += cakeInterval)
             {
                 Vector3 spawnPos = Vector3.Lerp(start, end, d / segmentLength);
-                spawnPos.y = groundY;  // ✅ relativo al NavMesh
+                spawnPos.y = groundY;
                 GameObject cake = Instantiate(cakePrefab, spawnPos, Quaternion.identity);
+                FreezeInPlace(cake);
                 spawnedCakes.Add(cake);
             }
         }
 
         // add the final cake at the end position
         Vector3 finalPos = corners[corners.Length - 1];
-        finalPos.y = groundY;  // ✅ relativo al NavMesh
+        finalPos.y = groundY;
         GameObject finalCake = Instantiate(cakePrefab, finalPos, Quaternion.identity);
+        FreezeInPlace(finalCake);
         spawnedCakes.Add(finalCake);
     }
 
@@ -95,6 +137,10 @@ public class CakePathFollower : MonoBehaviour
     {
         VRGuideController guideController = FindFirstObjectByType<VRGuideController>();
         if (guideController != null) guideController.isEating = true;
+
+        // Re-grab animator in case it changed
+        if (agent != null)
+            animator = agent.GetComponentInChildren<Animator>();
 
         float originalStoppingDist = agent.stoppingDistance;
 
@@ -111,18 +157,29 @@ public class CakePathFollower : MonoBehaviour
             agent.SetDestination(cakePos);
             agent.isStopped = false;
 
-            // wait until reach the cake
+            // wait until reach the cake — update Speed for walk animation
             while (agent.pathPending || agent.remainingDistance > agent.stoppingDistance)
             {
+                // Drive the walking animation
+                if (animator != null)
+                    animator.SetFloat("Speed", agent.velocity.magnitude);
+
                 yield return null;
             }
 
             // stop and ready to eat
             agent.isStopped = true;
-            agent.velocity = Vector3.zero; // avoid sliding
+            agent.velocity = Vector3.zero;
+
+            // Stop walk animation
+            if (animator != null)
+                animator.SetFloat("Speed", 0f);
+
             transform.LookAt(new Vector3(cakePos.x, transform.position.y, cakePos.z));
 
-            if (animator != null) animator.SetTrigger(eatAnimationTag);
+            // Play eat animation — use CrossFade to force it regardless of current state
+            if (animator != null)
+                animator.CrossFade("Eat", 0.25f);
 
             // time to eat
             yield return new WaitForSeconds(3.0f);
@@ -132,27 +189,42 @@ public class CakePathFollower : MonoBehaviour
             // check if it's the last cake
             if (i == spawnedCakes.Count - 1)
             {
-                Debug.Log("finsish the last cake, Arrive！");
+                Debug.Log("Finished the last cake, Arrive!");
 
-                // forced to Arrive state
                 if (animator != null)
                 {
-                    // Cut the Eat trigger first
                     animator.ResetTrigger(eatAnimationTag);
-                    // change to Arrive state with 0.1s crossfade
                     animator.CrossFade("Arrive", 0.1f);
                 }
 
-                // ensure the agent is fully stopped
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
                 agent.ResetPath();
 
-                // exit eating in guide controller
                 if (guideController != null) guideController.isEating = false;
-                agent.stoppingDistance = originalStoppingDist; // reset stopping distance
+                agent.stoppingDistance = originalStoppingDist;
                 yield break;
             }
+        }
+
+        // Safety: if we exit the loop normally, also reset eating state
+        if (guideController != null)
+        {
+            var gc = FindFirstObjectByType<VRGuideController>();
+            if (gc != null) gc.isEating = false;
+        }
+        agent.stoppingDistance = originalStoppingDist;
+    }
+
+    /// <summary>
+    /// Disables gravity/physics on a cake so it floats in place.
+    /// </summary>
+    void FreezeInPlace(GameObject cake)
+    {
+        foreach (var rb in cake.GetComponentsInChildren<Rigidbody>(true))
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
         }
     }
 
