@@ -11,9 +11,19 @@ public class CakePathFollower : MonoBehaviour
     public Animator animator;
     public float cakeInterval = 2f;
 
-    [Header("Cake Height")]
+    [Header("Cake Size & Height")]
+    [Tooltip("Scale multiplier for spawned cakes (1 = original size)")]
+    public float cakeScale = 0.5f;
     [Tooltip("How high above the NavMesh ground the cakes float")]
-    public float cakeHeightOffset = 0.4f;
+    public float cakeHeightOffset = 2.0f;
+
+    [Header("Levitation Effect")]
+    [Tooltip("How far the cake bobs up/down from its spawn point")]
+    public float levBobHeight = 0.4f;
+    [Tooltip("Bob speed (cycles per second)")]
+    public float levBobSpeed = 1.5f;
+    [Tooltip("Slow rotation speed (degrees/sec)")]
+    public float levRotateSpeed = 30f;
 
     [Header("Stop Distance")]
     public float stopDistance = 1.2f;
@@ -120,7 +130,9 @@ public class CakePathFollower : MonoBehaviour
                 Vector3 spawnPos = Vector3.Lerp(start, end, d / segmentLength);
                 spawnPos.y = groundY;
                 GameObject cake = Instantiate(cakePrefab, spawnPos, Quaternion.identity);
+                cake.transform.localScale *= cakeScale;
                 FreezeInPlace(cake);
+                AddLevitation(cake);
                 spawnedCakes.Add(cake);
             }
         }
@@ -129,7 +141,9 @@ public class CakePathFollower : MonoBehaviour
         Vector3 finalPos = corners[corners.Length - 1];
         finalPos.y = groundY;
         GameObject finalCake = Instantiate(cakePrefab, finalPos, Quaternion.identity);
+        finalCake.transform.localScale *= cakeScale;
         FreezeInPlace(finalCake);
+        AddLevitation(finalCake);
         spawnedCakes.Add(finalCake);
     }
 
@@ -226,6 +240,17 @@ public class CakePathFollower : MonoBehaviour
             rb.isKinematic = true;
             rb.useGravity = false;
         }
+    }
+
+    /// <summary>
+    /// Adds the levitation bob + rotation effect to a cake.
+    /// </summary>
+    void AddLevitation(GameObject cake)
+    {
+        var lev = cake.AddComponent<CakeLevitate>();
+        lev.bobHeight = levBobHeight;
+        lev.bobSpeed = levBobSpeed;
+        lev.rotateSpeed = levRotateSpeed;
     }
 
     void ClearCakes()

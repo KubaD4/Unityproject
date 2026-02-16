@@ -4731,7 +4731,12 @@ MonoBehaviour:
   cakePrefab: {fileID: 2228369293301480909, guid: 8c2970894ba0c6742af357940fecb649, type: 3}
   eatAnimationTag: Eat
   animator: {fileID: 1191340736}
-  cakeInterval: 3
+  cakeInterval: 2
+  cakeScale: 0.5
+  cakeHeightOffset: 1.3
+  levBobHeight: 0.01
+  levBobSpeed: 1.5
+  levRotateSpeed: 30
   stopDistance: 0.5
 --- !u!114 &1191340741
 MonoBehaviour:
@@ -8318,7 +8323,12 @@ MonoBehaviour:
   cakePrefab: {fileID: 703208634}
   eatAnimationTag: Eat
   animator: {fileID: 1882354391}
-  cakeInterval: 3
+  cakeInterval: 2
+  cakeScale: 0.5
+  cakeHeightOffset: 1.3
+  levBobHeight: 0.01
+  levBobSpeed: 1.5
+  levRotateSpeed: 30
   stopDistance: 0.5
 --- !u!1 &1893543660
 GameObject:
