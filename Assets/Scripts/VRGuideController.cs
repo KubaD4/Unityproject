@@ -12,7 +12,7 @@ public class VRGuideController : MonoBehaviour
     public Transform targetVisual; 
 
     [Header("Parameters")]
-    public float waitDistance = 3.0f;
+    public float waitDistance = 5.0f;
     public float continueDistance = 2.0f;
     public float wanderRadius = 10.0f;
     public float rotationSpeed = 5.0f;
