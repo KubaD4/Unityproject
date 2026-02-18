@@ -49,6 +49,18 @@ public class SceneManager : MonoBehaviour
         if (passthroughLayer != null)
             passthroughLayer.enabled = isAR;
 
+        // When entering AR, force NavMesh rebake and obstacle rescan
+        if (isAR)
+        {
+            var floorAlign = FindFirstObjectByType<ARFloorAlign>();
+            if (floorAlign != null)
+                floorAlign.ForceRebake();
+
+            var obstacleDetector = FindFirstObjectByType<ARObstacleDetector>();
+            if (obstacleDetector != null)
+                obstacleDetector.ForceRescan();
+        }
+
         Debug.Log("ToggleAR called! isAR = " + isAR);
     }
 

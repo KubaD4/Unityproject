@@ -12,6 +12,14 @@ public class RandomButton : MonoBehaviour
     {
         Debug.Log("Button is pressed");
 
+        // Auto-find guide controller if not assigned (e.g. AR button)
+        if (guideController == null)
+        {
+            guideController = FindFirstObjectByType<VRGuideController>();
+            if (guideController != null)
+                Debug.Log($"[RandomButton] Auto-found VRGuideController on '{guideController.gameObject.name}'");
+        }
+
         if (guideController != null)
         {
             // 1. move agent to random destination
@@ -22,7 +30,7 @@ public class RandomButton : MonoBehaviour
         }
         else
         {
-            Debug.LogError("【Error】Guide Controller not configured！");
+            Debug.LogError("【Error】Guide Controller not configured and none found in scene！");
         }
     }
 
