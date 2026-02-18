@@ -5398,9 +5398,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1278498654}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 53a2ab0cf234545deb593520603339fa, type: 3}
+  m_Script: {fileID: 11500000, guid: 4c5a39caa8a5c4ed3a7d18169df358f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FloatingMenuController
+  floatingMenu: {fileID: 0}
+  head: {fileID: 0}
+  distance: 0.8
 --- !u!114 &1278498656
 MonoBehaviour:
   m_ObjectHideFlags: 0
