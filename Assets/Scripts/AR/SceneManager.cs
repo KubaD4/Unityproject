@@ -9,6 +9,11 @@ public class SceneManager : MonoBehaviour
 
     public OVRPassthroughLayer passthroughLayer;
 
+    [Header("Real-World Obstacles (optional)")]
+    [Tooltip("Assign if you want real-world obstacles to load/clear when toggling AR. " +
+             "Leave null if not using scene understanding.")]
+    public RealWorldObstacleLoader obstacleLoader;
+
     //Normal mode by default
     private bool isAR = false;
 
@@ -22,6 +27,10 @@ public class SceneManager : MonoBehaviour
     {           
         if (ARSceneRoot != null)
             passthroughLayer = ARSceneRoot.GetComponentInChildren<OVRPassthroughLayer>();
+
+        // Auto-find obstacle loader if not assigned
+        if (obstacleLoader == null && ARSceneRoot != null)
+            obstacleLoader = ARSceneRoot.GetComponentInChildren<RealWorldObstacleLoader>(true);
 
         NormalSceneRoot.SetActive(!isAR);
         ARSceneRoot.SetActive(isAR);
@@ -48,6 +57,15 @@ public class SceneManager : MonoBehaviour
         ARSceneRoot.SetActive(isAR);
         if (passthroughLayer != null)
             passthroughLayer.enabled = isAR;
+
+        // Load or clear real-world obstacles when switching modes
+        if (obstacleLoader != null)
+        {
+            if (isAR)
+                obstacleLoader.LoadObstacles();
+            else
+                obstacleLoader.ClearObstacles();
+        }
 
         Debug.Log("ToggleAR called! isAR = " + isAR);
     }
