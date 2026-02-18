@@ -39,6 +39,12 @@ public class AvatarSelector : MonoBehaviour
                     guideController.agent.Warp(hit.position);
                 }
             }
+
+            // Move the avatar close to the user
+            toShow.transform.position = Camera.main.transform.position + Camera.main.transform.right * 0.5f + Camera.main.transform.forward * 0.8f;
+        
+            // Roatate to face the user
+            toShow.transform.rotation = Quaternion.LookRotation(-toShow.transform.position + Camera.main.transform.position);
         }
     }
 }
