@@ -6,6 +6,9 @@ public class MoveFlag : MonoBehaviour
     public GameObject flag;
     public float distance = 0.8f; 
 
+    [Header("Camera reference")]
+    public Transform head;  
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public void moveAndSpawn()
     {
@@ -13,7 +16,7 @@ public class MoveFlag : MonoBehaviour
         {
             //move flag right beside user
             flag.transform.position =
-                Camera.main.transform.position + Camera.main.transform.forward * distance;
+                head.position + head.forward * distance;
 
 
             flag.gameObject.SetActive(true);

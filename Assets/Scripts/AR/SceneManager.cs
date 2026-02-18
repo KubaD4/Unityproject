@@ -31,15 +31,15 @@ public class SceneManager : MonoBehaviour
 
     public void ToggleAR()
     {   
-        if (skip)
-        {
-            skip = false;
-            return;
-        }
-        else
-        {
-            skip = true;
-        }
+        // if (skip)
+        // {
+        //     skip = false;
+        //     return;
+        // }
+        // else
+        // {
+        //     skip = true;
+        // }
 
         isAR = !isAR;
 

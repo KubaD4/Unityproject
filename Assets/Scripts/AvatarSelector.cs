@@ -10,6 +10,9 @@ public class AvatarSelector : MonoBehaviour
     [Header("Controller reference")]
     public VRGuideController guideController;
 
+    [Header("Camera reference")]
+    public Transform head;  
+
     public void ChooseBanana() { SwitchAvatar(bananaMan, racer); }
     public void ChooseRacer() { SwitchAvatar(racer, bananaMan); }
 
@@ -41,10 +44,10 @@ public class AvatarSelector : MonoBehaviour
             }
 
             // Move the avatar close to the user
-            toShow.transform.position = Camera.main.transform.position + Camera.main.transform.right * 0.5f + Camera.main.transform.forward * 0.8f;
+            toShow.transform.position = head.transform.position + head.transform.right * 0.5f + head.transform.forward * 0.8f;
         
             // Roatate to face the user
-            toShow.transform.rotation = Quaternion.LookRotation(-toShow.transform.position + Camera.main.transform.position);
+            toShow.transform.rotation = Quaternion.LookRotation(-toShow.transform.position + head.transform.position);
         }
     }
 }

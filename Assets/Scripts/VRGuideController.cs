@@ -11,6 +11,7 @@ public class VRGuideController : MonoBehaviour
     public Transform playerHead;  
     public Transform targetVisual; 
 
+
     [Header("Parameters")]
     public float waitDistance = 5.0f;
     public float continueDistance = 2.0f;
@@ -28,7 +29,6 @@ public class VRGuideController : MonoBehaviour
     private float moveStartTime = -99f;
     public bool isEating = false;
     
-    // 🆕 NEW: Anti-stuck system
     private float lastPathUpdateTime = 0f;
     private Vector3 lastPosition;
     private float stuckCheckTime = 0f;
@@ -167,10 +167,11 @@ public class VRGuideController : MonoBehaviour
             
             if (targetVisual != null)
             {
-                targetVisual.position = finalDestination + Vector3.up * 0.05f;
+                targetVisual.position = finalDestination + Vector3.up * 1.87f;
                 targetVisual.gameObject.SetActive(true);
             }
             return;
+            
         }
 
         bool hasValidPath = agent.hasPath && 
@@ -313,14 +314,65 @@ public class VRGuideController : MonoBehaviour
         lastPathUpdateTime = Time.time;
         stuckCheckTime = Time.time;
 
-        // Step 6: Generate random destination
-        Vector3 randomPos = Random.insideUnitSphere * wanderRadius;
-        randomPos += agent.transform.position;
-        NavMeshHit destinationHit;
+        // Step 6: Generate random destination on the existing NavMesh
+        Vector3 foundDestination = Vector3.zero;
+        bool foundValid = false;
 
-        if (NavMesh.SamplePosition(randomPos, out destinationHit, wanderRadius, NavMesh.AllAreas))
+        // Try to pick a random point on the actual NavMesh triangulation
+        NavMeshTriangulation navData = NavMesh.CalculateTriangulation();
+        if (navData.indices != null && navData.indices.Length >= 3)
         {
-            finalDestination = destinationHit.position;
+            // Attempt several random triangles to find a reachable spot
+            for (int attempt = 0; attempt < 30 && !foundValid; attempt++)
+            {
+                // Pick a random triangle
+                int triIndex = Random.Range(0, navData.indices.Length / 3) * 3;
+                Vector3 v0 = navData.vertices[navData.indices[triIndex]];
+                Vector3 v1 = navData.vertices[navData.indices[triIndex + 1]];
+                Vector3 v2 = navData.vertices[navData.indices[triIndex + 2]];
+
+                // Random point inside the triangle (barycentric coords)
+                float r1 = Random.value;
+                float r2 = Random.value;
+                if (r1 + r2 > 1f) { r1 = 1f - r1; r2 = 1f - r2; }
+                Vector3 randomPoint = v0 + r1 * (v1 - v0) + r2 * (v2 - v0);
+
+                // Snap to NavMesh surface to be safe
+                NavMeshHit snapHit;
+                if (NavMesh.SamplePosition(randomPoint, out snapHit, 1.0f, NavMesh.AllAreas))
+                {
+                    // Verify the agent can actually path there
+                    NavMeshPath testPath = new NavMeshPath();
+                    if (agent.CalculatePath(snapHit.position, testPath) &&
+                        testPath.status == NavMeshPathStatus.PathComplete)
+                    {
+                        foundDestination = snapHit.position;
+                        foundValid = true;
+                    }
+                }
+            }
+        }
+
+        // Fallback: if no NavMesh triangulation or all attempts failed,
+        // use the old random sphere approach near the player
+        if (!foundValid)
+        {
+            Vector3 center = (playerHead != null) ? playerHead.position : agent.transform.position;
+            Vector3 randomPos = Random.insideUnitSphere * wanderRadius;
+            randomPos.y = 0f;
+            randomPos += center;
+            NavMeshHit destinationHit;
+
+            if (NavMesh.SamplePosition(randomPos, out destinationHit, wanderRadius, NavMesh.AllAreas))
+            {
+                foundDestination = destinationHit.position;
+                foundValid = true;
+            }
+        }
+
+        if (foundValid)
+        {
+            finalDestination = foundDestination;
 
             
             // PHASE 1: First go to player
@@ -340,10 +392,11 @@ public class VRGuideController : MonoBehaviour
                 hasReachedPlayer = true; // Skip phase 1
             }
             
-            // Hide target visual until phase 2
+            // Show target visual at the goal immediately so the player can see where it is
             if (targetVisual != null)
             {
-                targetVisual.gameObject.SetActive(false);
+                targetVisual.position = finalDestination + Vector3.up * 1.87f;
+                targetVisual.gameObject.SetActive(true);
             }
         }
         else
