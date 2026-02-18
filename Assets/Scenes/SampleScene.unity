@@ -6129,6 +6129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1452488647}
   - component: {fileID: 1452488648}
+  - component: {fileID: 1452488649}
   m_Layer: 0
   m_Name: ARRoot
   m_TagString: Untagged
@@ -6176,6 +6177,28 @@ MonoBehaviour:
   VerboseLogging: 0
   MaxSceneAnchorUpdatesPerFrame: 3
   _initialAnchorParent: {fileID: 0}
+--- !u!114 &1452488649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1452488646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef5af90e83b3f42d9aa0ab9827a23eb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealWorldObstacleLoader
+  enableCarving: 1
+  navMeshSurface: {fileID: 0}
+  obstacleLabels: 8092
+  colliderOnlyLabels: 2
+  useGlobalMeshCollider: 0
+  wallThickness: 0.15
+  defaultPlaneThickness: 0.05
+  showDebugVisuals: 0
+  visualOpacity: 0.35
+  arParent: {fileID: 1452488647}
 --- !u!1 &1465319574
 GameObject:
   m_ObjectHideFlags: 0
