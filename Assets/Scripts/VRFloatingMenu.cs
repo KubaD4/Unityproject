@@ -10,8 +10,9 @@ public class VRFloatingMenu : MonoBehaviour
 
     void Update()
     {
-        // if clicked the menu button on the VR controller, toggle the menu
-        if (Input.GetButtonDown("Fire1"))
+        // Toggle menu with Meta Quest "B" button (right controller)
+        // B = Button.Two on right controller; Y = Button.Four on left controller
+        if (OVRInput.GetDown(OVRInput.Button.Two))
         {
             ToggleMenu();
         }

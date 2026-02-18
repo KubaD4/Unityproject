@@ -1,4 +1,7 @@
 ﻿using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class SimpleMove : MonoBehaviour
 {
@@ -13,11 +16,19 @@ public class SimpleMove : MonoBehaviour
         // A. enter movement input
         Vector2 moveInput = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick); // VR left
 
-        // if no VR input, try keyboard (WASD or arrow keys)
+        // if no VR input, try keyboard (WASD or arrow keys) via new Input System
         if (moveInput == Vector2.zero)
         {
-            moveInput.x = Input.GetAxis("Horizontal"); // keyboard A/D or ←/→
-            moveInput.y = Input.GetAxis("Vertical");   // keyboard W/S or ↑/↓
+#if ENABLE_INPUT_SYSTEM
+            var keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.aKey.isPressed) moveInput.x -= 1f;
+                if (keyboard.dKey.isPressed) moveInput.x += 1f;
+                if (keyboard.wKey.isPressed) moveInput.y += 1f;
+                if (keyboard.sKey.isPressed) moveInput.y -= 1f;
+            }
+#endif
         }
 
         // B. enter turn input
@@ -25,8 +36,14 @@ public class SimpleMove : MonoBehaviour
 
         if (Mathf.Abs(turnInput) < 0.01f)
         {
-            if (Input.GetKey(KeyCode.Q)) turnInput = -1;
-            else if (Input.GetKey(KeyCode.E)) turnInput = 1;
+#if ENABLE_INPUT_SYSTEM
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.qKey.isPressed) turnInput = -1;
+                else if (kb.eKey.isPressed) turnInput = 1;
+            }
+#endif
         }
 
         // Execution logic

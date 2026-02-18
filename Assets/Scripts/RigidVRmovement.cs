@@ -1,4 +1,8 @@
 ﻿using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
+#endif
 
 public class RigidbodyVRMovement : MonoBehaviour
 {
@@ -32,39 +36,65 @@ public class RigidbodyVRMovement : MonoBehaviour
     {
         if (rb == null) return;
 
-        // 1. Q/E rotation
-        float rotateDir = 0f;
-        if (Input.GetKey(KeyCode.Q)) rotateDir = -1f; // left
-        if (Input.GetKey(KeyCode.E)) rotateDir = 1f;  // right
+        // ── VR: right thumbstick for rotation ──
+        float rotateDir = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick).x;
 
-        // press Q or E
+        // Keyboard fallback (Q/E) via new Input System
+#if ENABLE_INPUT_SYSTEM
+        if (Mathf.Abs(rotateDir) < 0.01f)
+        {
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.qKey.isPressed) rotateDir = -1f;
+                if (kb.eKey.isPressed) rotateDir = 1f;
+            }
+        }
+#endif
+
         if (rotateDir != 0)
         {
-            // Rotate the body around the Y-axis
             float turnAmount = rotateDir * rotateSpeed * Time.fixedDeltaTime;
             Quaternion turnOffset = Quaternion.Euler(0, turnAmount, 0);
             rb.MoveRotation(rb.rotation * turnOffset);
         }
 
-        // 2.  WASD 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+        // ── VR: left thumbstick for movement ──
+        Vector2 stick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
+        float x = stick.x;
+        float z = stick.y;
 
-        Vector3 moveDirection = Vector3.zero;
-
-        // If you don't have a headset, use the right mouse button to assist with steering (optional).
-        if (Input.GetMouseButton(1))
+        // Keyboard fallback (WASD) via new Input System
+#if ENABLE_INPUT_SYSTEM
+        if (Mathf.Approximately(x, 0f) && Mathf.Approximately(z, 0f))
         {
-            float mouseX = Input.GetAxis("Mouse X");
-            float mouseTurn = mouseX * 2.0f; // Mouse sensitivity
-            Quaternion mouseTurnOffset = Quaternion.Euler(0, mouseTurn, 0);
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.aKey.isPressed) x -= 1f;
+                if (kb.dKey.isPressed) x += 1f;
+                if (kb.wKey.isPressed) z += 1f;
+                if (kb.sKey.isPressed) z -= 1f;
+            }
+        }
+#endif
+
+        // Mouse look fallback via new Input System
+#if ENABLE_INPUT_SYSTEM
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.rightButton.isPressed)
+        {
+            float mouseX = mouse.delta.x.ReadValue() * 0.1f;
+            Quaternion mouseTurnOffset = Quaternion.Euler(0, mouseX * 2.0f, 0);
             rb.MoveRotation(rb.rotation * mouseTurnOffset);
         }
+#endif
+
+        Vector3 moveDirection = Vector3.zero;
 
         // Calculate movement direction
         if (cameraTransform != null)
         {
-            // get camera forward and right vectors
             Vector3 forward = cameraTransform.forward;
             Vector3 right = cameraTransform.right;
 
