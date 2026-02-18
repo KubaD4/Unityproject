@@ -1,17 +1,45 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class VRFloatingMenu : MonoBehaviour
 {
     public GameObject floatingMenu;      
     public Transform head;                
     public float distance = 0.8f;
+    
+    [Header("Input")]
+    [Tooltip("Assign the menu button action here")]
+    public InputActionProperty toggleAction = new InputActionProperty(new InputAction("Menu", binding: "<XRController>/menuButton"));
 
     private bool isOpen = false;
 
+    void OnEnable()
+    {
+        if (toggleAction.action != null) toggleAction.action.Enable();
+    }
+
+    void OnDisable()
+    {
+        if (toggleAction.action != null) toggleAction.action.Disable();
+    }
+
     void Update()
     {
-        // if clicked the menu button on the VR controller, toggle the menu
-        if (Input.GetButtonDown("Fire1"))
+        bool toggled = false;
+
+        // 1. XR Controller Input
+        if (toggleAction.action != null && toggleAction.action.WasPressedThisFrame())
+        {
+            toggled = true;
+        }
+
+        // 2. Keyboard Fallback (for Simulator/Editor) -> Press 'M'
+        if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+        {
+            toggled = true;
+        }
+
+        if (toggled)
         {
             ToggleMenu();
         }
@@ -32,6 +60,9 @@ public class VRFloatingMenu : MonoBehaviour
 
     void OpenMenu()
     {
+        if (floatingMenu == null) return;
+        if (head == null) head = Camera.main != null ? Camera.main.transform : transform;
+
         // Posizione davanti alla testa
         floatingMenu.transform.position =
             head.position + head.forward * distance;
@@ -46,6 +77,7 @@ public class VRFloatingMenu : MonoBehaviour
 
     void CloseMenu()
     {
+        if (floatingMenu == null) return;
         floatingMenu.SetActive(false);
         isOpen = false;
     }

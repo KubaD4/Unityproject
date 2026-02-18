@@ -12,10 +12,36 @@ public class VRGuideController : MonoBehaviour
     public Transform targetVisual; 
 
     [Header("Parameters")]
-    public float waitDistance = 5.0f;
+    public float waitDistance = 3.0f;
     public float continueDistance = 2.0f;
     public float wanderRadius = 10.0f;
     public float rotationSpeed = 5.0f;
+
+    [Header("Smart Spawn")]
+    [Tooltip("Minimum distance from avatar for random destination")]
+    public float minSpawnDistance = 2.0f;
+    [Tooltip("Max attempts to find a valid position")]
+    public int maxSpawnAttempts = 10;
+    [Tooltip("Radius to check for colliders at spawn point (avoid spawning inside objects)")]
+    public float spawnCollisionCheckRadius = 0.5f;
+    [Tooltip("Layers to check for obstacles when spawning (default: everything)")]
+    public LayerMask obstacleLayerMask = ~0;
+    
+    [Header("Debug")]
+    public bool showDebugVisuals = true;
+
+    private void SpawnDebugMarker(Vector3 pos, Color color)
+    {
+        if (!showDebugVisuals) return;
+        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        marker.transform.position = pos;
+        marker.transform.localScale = Vector3.one * 0.2f;
+        marker.GetComponent<Collider>().enabled = false; // Don't block NavMesh!
+        var renderer = marker.GetComponent<Renderer>();
+        renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit")); // Or Standard
+        renderer.material.color = color;
+        Destroy(marker, 5.0f); // Auto-cleanup
+    }
     
     [Header("Two-Phase Navigation")]
     public float reachPlayerDistance = 1.8f;
@@ -44,7 +70,7 @@ public class VRGuideController : MonoBehaviour
     void Update()
     {
         // Safety check
-        if (agent == null || !agent.gameObject.activeInHierarchy) return;
+        if (agent == null || !agent.gameObject.activeInHierarchy || !agent.isOnNavMesh) return;
 
         // 1. Data gathering
         float speed = agent.velocity.magnitude;
@@ -262,13 +288,14 @@ public class VRGuideController : MonoBehaviour
         // Step 1: Ensure the Agent is alive
         if (agent == null || !agent.gameObject.activeInHierarchy)
         {
-            Debug.LogWarning("Current Agent invalid; searching for an active Agent...");
+            Debug.LogWarning("[VRGuide] Current Agent invalid; searching for an active Agent...");
             var allAgents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
             foreach (var a in allAgents)
             {
                 if (a.gameObject.activeInHierarchy)
                 {
                     agent = a;
+                    Debug.Log($"[VRGuide] Found active agent: '{a.gameObject.name}' at {a.transform.position}");
                     break;
                 }
             }
@@ -276,9 +303,15 @@ public class VRGuideController : MonoBehaviour
 
         if (agent == null)
         {
-            Debug.LogError("No active Agent found in the scene!");
+            Debug.LogError("[VRGuide] No active Agent found in the scene!");
             return;
         }
+
+        Debug.Log($"[VRGuide] Using agent '{agent.gameObject.name}' at pos={agent.transform.position}, " +
+                  $"isOnNavMesh={agent.isOnNavMesh}, enabled={agent.enabled}");
+
+        // Make sure the agent component itself is enabled
+        if (!agent.enabled) agent.enabled = true;
 
         // Step 2: Force-refresh Animator 
         animator = agent.GetComponentInChildren<Animator>();
@@ -290,18 +323,52 @@ public class VRGuideController : MonoBehaviour
             if (a != agent && a.gameObject.activeInHierarchy)
             {
                 a.gameObject.SetActive(false);
-
             }
         }
 
-        // Step 4: Position safety fix
+        // Step 4: Position safety fix — ensure agent is on NavMesh
         if (!agent.isOnNavMesh)
         {
+            Debug.Log("[VRGuide] Agent NOT on NavMesh, attempting to fix...");
+
+            // In AR the NavMesh may need a rebake first
+            var arFloor = FindFirstObjectByType<ARFloorAlign>();
+            if (arFloor != null)
+            {
+                Debug.Log("[VRGuide] AR mode detected, forcing NavMesh rebake...");
+                arFloor.ForceRebake();
+            }
+
+            // Try to find the nearest NavMesh point (large radius to handle AR floor offset)
             NavMeshHit hit;
-            if (NavMesh.SamplePosition(agent.transform.position, out hit, 2.0f, NavMesh.AllAreas))
+            if (NavMesh.SamplePosition(agent.transform.position, out hit, 50.0f, NavMesh.AllAreas))
             {
                 agent.Warp(hit.position);
-
+                Debug.Log($"[VRGuide] Warped agent to NavMesh at {hit.position} " +
+                          $"(was at {agent.transform.position})");
+            }
+            else
+            {
+                // Last resort: try player position as the search origin
+                if (playerHead != null)
+                {
+                    Debug.Log($"[VRGuide] Trying from playerHead position: {playerHead.position}");
+                    if (NavMesh.SamplePosition(playerHead.position, out hit, 50.0f, NavMesh.AllAreas))
+                    {
+                        agent.Warp(hit.position);
+                        Debug.Log($"[VRGuide] Warped agent to NavMesh near player at {hit.position}");
+                    }
+                    else
+                    {
+                        Debug.LogError("[VRGuide] Cannot find any NavMesh surface anywhere!");
+                        return;
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[VRGuide] Cannot find any NavMesh surface and no playerHead!");
+                    return;
+                }
             }
         }
 
@@ -313,16 +380,13 @@ public class VRGuideController : MonoBehaviour
         lastPathUpdateTime = Time.time;
         stuckCheckTime = Time.time;
 
-        // Step 6: Generate random destination
-        Vector3 randomPos = Random.insideUnitSphere * wanderRadius;
-        randomPos += agent.transform.position;
-        NavMeshHit destinationHit;
+        // Step 6: Generate a smart random destination (avoids objects, validates path)
+        Vector3? validDest = FindValidDestination();
 
-        if (NavMesh.SamplePosition(randomPos, out destinationHit, wanderRadius, NavMesh.AllAreas))
+        if (validDest.HasValue)
         {
-            finalDestination = destinationHit.position;
+            finalDestination = validDest.Value;
 
-            
             // PHASE 1: First go to player
             if (playerHead != null)
             {
@@ -330,7 +394,6 @@ public class VRGuideController : MonoBehaviour
                 hasReachedPlayer = false;
                 isWaitingNearPlayer = false;
                 agent.SetDestination(playerHead.position);
-        
             }
             else
             {
@@ -339,7 +402,7 @@ public class VRGuideController : MonoBehaviour
                 agent.SetDestination(finalDestination);
                 hasReachedPlayer = true; // Skip phase 1
             }
-            
+
             // Hide target visual until phase 2
             if (targetVisual != null)
             {
@@ -348,7 +411,137 @@ public class VRGuideController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Failed to find valid destination on NavMesh!");
+            Debug.LogError("[VRGuide] Failed to find ANY valid destination on NavMesh!");
         }
+    }
+
+    /// <summary>
+    /// Tries multiple random positions to find one that is:
+    ///   1. On the NavMesh
+    ///   2. Reachable via a complete path
+    ///   3. Not overlapping any physics colliders (walls/furniture/AR objects)
+    ///   4. At least minSpawnDistance away from the avatar
+    /// Falls back to a simple NavMesh sample if all attempts fail.
+    /// </summary>
+    private Vector3? FindValidDestination()
+    {
+        if (agent == null) return null;
+
+        Debug.Log($"[VRGuide] FindValidDestination: agent pos={agent.transform.position}, " +
+                  $"isOnNavMesh={agent.isOnNavMesh}, wanderRadius={wanderRadius}");
+
+        for (int attempt = 0; attempt < maxSpawnAttempts; attempt++)
+        {
+            // Random direction on the XZ plane (flat circle, avoids vertical bias)
+            Vector2 rndCircle = Random.insideUnitCircle * wanderRadius;
+            Vector3 randomPos = agent.transform.position + new Vector3(rndCircle.x, 0f, rndCircle.y);
+
+            // Snap to nearest NavMesh surface (small radius — stay near the random point)
+            NavMeshHit hit;
+            if (!NavMesh.SamplePosition(randomPos, out hit, 2.0f, NavMesh.AllAreas))
+            {
+                Debug.Log($"[VRGuide] Attempt {attempt + 1}: no NavMesh near {randomPos}");
+                SpawnDebugMarker(randomPos, Color.red);
+                continue;
+            }
+
+            Vector3 candidate = hit.position;
+
+            // --- Check 1: must be within wanderRadius ---
+            float dist = Vector3.Distance(agent.transform.position, candidate);
+            if (dist > wanderRadius)
+            {
+                Debug.Log($"[VRGuide] Attempt {attempt + 1}: too far ({dist:F1}m > {wanderRadius}m), skipping");
+                SpawnDebugMarker(candidate, Color.red);
+                continue;
+            }
+
+            // --- Check 2: minimum distance ---
+            if (dist < minSpawnDistance)
+            {
+                Debug.Log($"[VRGuide] Attempt {attempt + 1}: too close ({dist:F1}m), skipping");
+                SpawnDebugMarker(candidate, Color.red);
+                continue;
+            }
+
+            // --- Check 2: physics overlap (avoid spawning inside objects) ---
+            // Check slightly above ground level to catch furniture/walls
+            Collider[] overlaps = Physics.OverlapSphere(
+                candidate + Vector3.up * 0.5f,
+                spawnCollisionCheckRadius,
+                obstacleLayerMask,
+                QueryTriggerInteraction.Ignore
+            );
+
+            // Filter out floor/ground colliders — only reject actual obstacles
+            bool hasRealObstacle = false;
+            foreach (var col in overlaps)
+            {
+                // Skip the agent itself
+                if (col.gameObject == agent.gameObject) continue;
+                if (col.GetComponent<NavMeshAgent>() != null) continue;
+
+                // Skip floor/ground/plane objects by name (case-insensitive)
+                string objName = col.gameObject.name.ToLower();
+                if (objName.Contains("floor") || objName.Contains("ground") ||
+                    objName.Contains("plane") || objName.Contains("navmesh") ||
+                    objName.Contains("surface"))
+                    continue;
+
+                // Skip parent hierarchy floor objects (e.g. Plane under ARFloor)
+                bool isFloorChild = false;
+                Transform parent = col.transform.parent;
+                while (parent != null)
+                {
+                    string parentName = parent.name.ToLower();
+                    if (parentName.Contains("floor") || parentName.Contains("ground"))
+                    {
+                        isFloorChild = true;
+                        break;
+                    }
+                    parent = parent.parent;
+                }
+                if (isFloorChild) continue;
+
+                // Skip very flat colliders (likely ground/floor)
+                if (col.bounds.size.y < 0.15f) continue;
+
+                hasRealObstacle = true;
+                Debug.Log($"[VRGuide] Attempt {attempt + 1}: blocked by '{col.gameObject.name}' " +
+                          $"(bounds: {col.bounds.size}), skipping");
+                SpawnDebugMarker(candidate, Color.red);
+                break;
+            }
+            if (hasRealObstacle) continue;
+
+            // --- Check 3: full path validation (can the agent actually walk there?) ---
+            NavMeshPath testPath = new NavMeshPath();
+            if (!agent.CalculatePath(candidate, testPath) ||
+                testPath.status != NavMeshPathStatus.PathComplete)
+            {
+                Debug.Log($"[VRGuide] Attempt {attempt + 1}: path incomplete to {candidate}");
+                SpawnDebugMarker(candidate, Color.red);
+                continue;
+            }
+
+            Debug.Log($"[VRGuide] ✅ Valid destination on attempt {attempt + 1}: {candidate}");
+            SpawnDebugMarker(candidate, Color.green);
+            return candidate;
+        }
+
+        // --- Fallback: relax ALL checks, just use a NavMesh sample ---
+        Debug.LogWarning("[VRGuide] Could not find ideal position, using fallback (NavMesh sample only)");
+        Vector2 fallbackCircle = Random.insideUnitCircle * wanderRadius;
+        Vector3 fallbackPos = agent.transform.position + new Vector3(fallbackCircle.x, 0f, fallbackCircle.y);
+        NavMeshHit fallbackHit;
+        if (NavMesh.SamplePosition(fallbackPos, out fallbackHit, wanderRadius, NavMesh.AllAreas))
+        {
+            Debug.Log($"[VRGuide] Fallback destination: {fallbackHit.position}");
+            SpawnDebugMarker(fallbackHit.position, Color.yellow); // Yellow for fallback
+            return fallbackHit.position;
+        }
+
+        Debug.LogError("[VRGuide] Fallback also failed — no NavMesh found at all!");
+        return null;
     }
 }

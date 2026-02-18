@@ -2517,10 +2517,6 @@ PrefabInstance:
       propertyPath: _maxRayLength
       value: 20
       objectReference: {fileID: 0}
-    - target: {fileID: 4148778239110795873, guid: 0a7d2469f24041c4284c66706f84c45e, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4439,6 +4435,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ARFloorAlign
   player: {fileID: 1658780483}
   floorHeight: -5
+  rebakeThreshold: 1
+  rebakeCooldown: 0.5
+  enableBoundaries: 1
+  boundarySize: {x: 10, y: 10}
+  boundaryHeight: 3
+  visibleBoundaries: 1
 --- !u!65 &1095758826
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5679,6 +5681,13 @@ MonoBehaviour:
   continueDistance: 2
   wanderRadius: 10
   rotationSpeed: 5
+  minSpawnDistance: 2
+  maxSpawnAttempts: 10
+  spawnCollisionCheckRadius: 0.5
+  obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  showDebugVisuals: 1
   reachPlayerDistance: 1.8
   isEating: 0
 --- !u!114 &1288048203
@@ -7948,6 +7957,26 @@ MonoBehaviour:
   floatingMenu: {fileID: 1278498654}
   head: {fileID: 1322901285}
   distance: 0.8
+  toggleAction:
+    m_UseReference: 0
+    m_Action:
+      m_Name: Menu
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: 62edf8a2-3b43-48cb-b0bc-8c8e3bdd306c
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings:
+      - m_Name: 
+        m_Id: 8a31b5b5-a21d-4d99-b01d-88afb6c99888
+        m_Path: <XRController>/menuButton
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: Menu
+        m_Flags: 0
+      m_Flags: 0
+    m_Reference: {fileID: 0}
 --- !u!1 &1658780478
 GameObject:
   m_ObjectHideFlags: 0
@@ -7961,7 +7990,6 @@ GameObject:
   - component: {fileID: 1658780481}
   - component: {fileID: 1658780480}
   - component: {fileID: 1658780479}
-  - component: {fileID: 1658780484}
   m_Layer: 0
   m_Name: '[BuildingBlock] Camera Rig'
   m_TagString: Untagged
@@ -8108,19 +8136,6 @@ MonoBehaviour:
   installationRoutineCheckpoint:
     _installationRoutineId: 
     _installationVariants: []
---- !u!114 &1658780484
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1658780478}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1234567890abcdef1234567890abcdef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rig: {fileID: 557783196}
 --- !u!4 &1658780483
 Transform:
   m_ObjectHideFlags: 0
