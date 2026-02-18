@@ -1246,6 +1246,7 @@ GameObject:
   - component: {fileID: 235716542}
   - component: {fileID: 235716541}
   - component: {fileID: 235716544}
+  - component: {fileID: 235716545}
   m_Layer: 5
   m_Name: Random
   m_TagString: Untagged
@@ -1329,6 +1330,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 1
+      - m_Target: {fileID: 235716545}
+        m_TargetAssemblyTypeName: MoveFlag, Assembly-CSharp
+        m_MethodName: despawn
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 1
 --- !u!114 &235716542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1381,6 +1394,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RandomButton
   guideController: {fileID: 1288048202}
   pathManager: {fileID: 173487758}
+--- !u!114 &235716545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 235716539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46f1c9ce2b0b44f6ea470212dad97473, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MoveFlag
+  flag: {fileID: 1494118260}
+  distance: 0.8
 --- !u!1 &326809352
 GameObject:
   m_ObjectHideFlags: 0
@@ -3471,7 +3498,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2806714669947893885, guid: 8a8f57edf3523624eb9f886833e8e97a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -7.03
+      value: -7.93
       objectReference: {fileID: 0}
     - target: {fileID: 2806714669947893885, guid: 8a8f57edf3523624eb9f886833e8e97a, type: 3}
       propertyPath: m_LocalPosition.y
@@ -3479,7 +3506,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2806714669947893885, guid: 8a8f57edf3523624eb9f886833e8e97a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 12.29
+      value: 12.33
       objectReference: {fileID: 0}
     - target: {fileID: 2806714669947893885, guid: 8a8f57edf3523624eb9f886833e8e97a, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4843,6 +4870,7 @@ GameObject:
   - component: {fileID: 1284579914}
   - component: {fileID: 1284579913}
   - component: {fileID: 1284579912}
+  - component: {fileID: 1284579916}
   m_Layer: 5
   m_Name: Flag
   m_TagString: Untagged
@@ -4940,6 +4968,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 1
+      - m_Target: {fileID: 1284579916}
+        m_TargetAssemblyTypeName: MoveFlag, Assembly-CSharp
+        m_MethodName: moveAndSpawn
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 1
 --- !u!114 &1284579914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4978,6 +5018,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1284579910}
   m_CullTransparentMesh: 1
+--- !u!114 &1284579916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1284579910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46f1c9ce2b0b44f6ea470212dad97473, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MoveFlag
+  flag: {fileID: 1494118260}
+  distance: 0.8
 --- !u!1 &1288048201
 GameObject:
   m_ObjectHideFlags: 0
@@ -6301,7 +6355,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 597a73828139ede468d5cfbd1033854b, type: 3}
       propertyPath: m_TagString
