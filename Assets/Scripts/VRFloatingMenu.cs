@@ -33,11 +33,9 @@ public class VRFloatingMenu : MonoBehaviour
 
     void OpenMenu()
     {
-        // Posizione davanti alla testa
         floatingMenu.transform.position =
             head.position + head.forward * distance;
 
-        // Rotazione verso il giocatore
         floatingMenu.transform.rotation =
             Quaternion.LookRotation(floatingMenu.transform.position - head.position);
 
