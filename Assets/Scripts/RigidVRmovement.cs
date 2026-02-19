@@ -2,13 +2,13 @@
 
 public class RigidbodyVRMovement : MonoBehaviour
 {
-    [Header("Move Setting")]
+    [Header("movesetting")]
     public float moveSpeed = 5.0f;
 
-    [Header("Rotate Speed")]
-    public float rotateSpeed = 100.0f;
+    [Header("rotatespeed")]
+    public float rotateSpeed = 100.0f; 
 
-    [Header("Component Reference")]
+    [Header("Component reference")]
     public Transform cameraTransform;
 
     private Rigidbody rb;
@@ -17,92 +17,66 @@ public class RigidbodyVRMovement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
 
+        // find the camera
         if (cameraTransform == null && Camera.main != null)
             cameraTransform = Camera.main.transform;
 
+        // Ensure the rigid body is set up correctly.
         if (rb != null)
-            rb.freezeRotation = true;
-    }
-
-    void Update()
-    {
-        bool leftConnected  = OVRInput.IsControllerConnected(OVRInput.Controller.LTouch);
-        bool rightConnected = OVRInput.IsControllerConnected(OVRInput.Controller.RTouch);
-
-        Debug.Log("Left: " + leftConnected + " | Right: " + rightConnected);
-
-        Vector2 stick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
-        Debug.Log("Stick: " + stick);
+        {
+            rb.freezeRotation = true; 
+        }
     }
 
     void FixedUpdate()
     {
         if (rb == null) return;
 
-        HandleRotation();
-        HandleMovement();
-    }
-
-    void HandleRotation()
-    {
+        // 1. Q/E rotation
         float rotateDir = 0f;
+        if (Input.GetKey(KeyCode.Q)) rotateDir = -1f; // left
+        if (Input.GetKey(KeyCode.E)) rotateDir = 1f;  // right
 
-        // VR: joystick destro sull'asse X
-        rotateDir = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick).x;
-
-        // Fallback keyboard se il joystick non viene premuto
-        if (Mathf.Abs(rotateDir) < 0.01f)
+        // press Q or E
+        if (rotateDir != 0)
         {
-            if (Input.GetKey(KeyCode.Q)) rotateDir = -1f;
-            if (Input.GetKey(KeyCode.E)) rotateDir =  1f;
-        }
-
-        // Fallback mouse (tasto destro tenuto premuto)
-        if (Mathf.Abs(rotateDir) < 0.01f && Input.GetMouseButton(1))
-        {
-            rotateDir = Input.GetAxis("Mouse X") * 0.5f;
-        }
-
-        if (Mathf.Abs(rotateDir) > 0.01f)
-        {
+            // Rotate the body around the Y-axis
             float turnAmount = rotateDir * rotateSpeed * Time.fixedDeltaTime;
             Quaternion turnOffset = Quaternion.Euler(0, turnAmount, 0);
             rb.MoveRotation(rb.rotation * turnOffset);
         }
-    }
 
-    void HandleMovement()
-    {
-        float x = 0f;
-        float z = 0f;
-
-        // VR: joystick sinistro
-        Vector2 stick = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
-        x = stick.x;
-        z = stick.y;
-
-        // Fallback keyboard WASD se il joystick non viene premuto
-        if (Mathf.Approximately(x, 0f) && Mathf.Approximately(z, 0f))
-        {
-            x = Input.GetAxis("Horizontal"); // A/D
-            z = Input.GetAxis("Vertical");   // W/S
-        }
+        // 2.  WASD 
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
 
         Vector3 moveDirection = Vector3.zero;
 
+        // If you don't have a headset, use the right mouse button to assist with steering (optional).
+        if (Input.GetMouseButton(1))
+        {
+            float mouseX = Input.GetAxis("Mouse X");
+            float mouseTurn = mouseX * 2.0f; // Mouse sensitivity
+            Quaternion mouseTurnOffset = Quaternion.Euler(0, mouseTurn, 0);
+            rb.MoveRotation(rb.rotation * mouseTurnOffset);
+        }
+
+        // Calculate movement direction
         if (cameraTransform != null)
         {
+            // get camera forward and right vectors
             Vector3 forward = cameraTransform.forward;
-            Vector3 right   = cameraTransform.right;
+            Vector3 right = cameraTransform.right;
 
             forward.y = 0;
-            right.y   = 0;
+            right.y = 0;
             forward.Normalize();
             right.Normalize();
 
             moveDirection = forward * z + right * x;
         }
 
+        // gravity compensation
         Vector3 finalVelocity = moveDirection * moveSpeed;
         rb.linearVelocity = new Vector3(finalVelocity.x, rb.linearVelocity.y, finalVelocity.z);
     }
