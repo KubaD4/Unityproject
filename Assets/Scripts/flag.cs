@@ -29,9 +29,30 @@ public class flag : MonoBehaviour
     // Parameter type PointerEvent
     private void HandlePointerEventRaised(PointerEvent evt)
     {
+        // Re-enable physics when grabbed again so grabbing still works
+        if (evt.Type == PointerEventType.Select)
+        {
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true; // Grabbable will manage kinematic state while held
+                rb.useGravity = false;
+            }
+        }
+
         // Logic triggered when the grab is released
         if (evt.Type == PointerEventType.Unselect)
         {
+            // Freeze the flag in place so it doesn't drift after release
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+
             Debug.Log("Flag released, instructing Avatar to move to: " + transform.position);
 
             // 1. If the current avatarScript is null, or its GameObject is inactive
